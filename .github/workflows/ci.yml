@@ -1,0 +1,26 @@
+name: CI
+
+# GitHub's macOS runners are VMs and cannot start Apple containers, so CI runs only the
+# host-only checks. Container behaviour is tested on a real Mac with `make e2e`.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  host-tests:
+    name: Lint, host-only tests, unit mutants (macOS)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Lint
+        run: make lint
+
+      - name: Host-only tests
+        run: make test
+
+      - name: Mutants (tests must fail when the code is broken)
+        run: make mutants

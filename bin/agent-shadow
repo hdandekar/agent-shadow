@@ -1,0 +1,184 @@
+#!/bin/zsh
+# agent-shadow — Sandboxed Host-Agnostic Distros, Orchestrated Workspaces
+# Easy to wash, coding agents do run safely in an isolated shadow workspace.
+#
+# https://github.com/hdandekar/agent-shadow
+# License: MIT
+
+set -euo pipefail
+
+# ---------------------------------------------------------------------------
+# Locate the lib/ directory relative to this script, regardless of where
+# Homebrew installs it.  Symlink-safe via :A (zsh absolute path resolution).
+# ---------------------------------------------------------------------------
+_SCRIPT_DIR="${${(%):-%x}:A:h}"
+_LIB_DIR="${_SCRIPT_DIR}/../lib/agent-shadow"
+
+# ---------------------------------------------------------------------------
+# Source libraries in dependency order
+# ---------------------------------------------------------------------------
+source "${_LIB_DIR}/helpers.zsh"
+source "${_LIB_DIR}/image.zsh"
+source "${_LIB_DIR}/integrity.zsh"
+source "${_LIB_DIR}/egress.zsh"
+source "${_LIB_DIR}/cmd_init.zsh"
+source "${_LIB_DIR}/cmd_register.zsh"
+source "${_LIB_DIR}/session.zsh"
+source "${_LIB_DIR}/cmd_run.zsh"
+source "${_LIB_DIR}/cmd_tools.zsh"
+source "${_LIB_DIR}/cmd_start.zsh"
+source "${_LIB_DIR}/cmd_connect.zsh"
+source "${_LIB_DIR}/cmd_stop.zsh"
+source "${_LIB_DIR}/cmd_wash.zsh"
+source "${_LIB_DIR}/cmd_doctor.zsh"
+source "${_LIB_DIR}/cmd_uninstall.zsh"
+source "${_LIB_DIR}/cmd_traffic.zsh"
+source "${_LIB_DIR}/cmd_git.zsh"
+
+# ---------------------------------------------------------------------------
+# Help text
+# ---------------------------------------------------------------------------
+_help() {
+  cat >&2 <<'EOF'
+
+  ╔══════════════════════════════════════════════════════════════╗
+  ║           agent-shadow — isolated AI coding agents           ║
+  ║  Sandboxed Host-Agnostic Distros, Orchestrated Workspaces   ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+USAGE
+  agent-shadow <command> [options]
+
+COMMANDS
+  init        [opts]                       Build base image + seed mise volume (opts: --distro, --subnet, --force)
+  register    [dir] [opts]                 Register a workspace (opts: --distro, --isolated or --network, --subnet)
+  unregister  <dir>                        Remove a workspace from the registry
+  start       [dir] [opts]                 Start background container (keeps ports open)
+  connect     [dir] [-i|--network NAME]    Open shell in active container (alias: shell)
+  run         [opts] <agent> [args...]     Launch or attach to agent inside workspace
+  stop        [dir] [--all]                Stop active workspace container
+  wash        [dir] [--force]              Reset workspace agent state/memory (all-or-nothing)
+  tools       [opts] <mise-args...>        Run mise commands with write access to toolchains
+  list                                     List all registered workspaces
+  traffic     [dir] [opts]                 Audit outbound network calls (opts: --all, --follow, --clear)
+  egress      [dir] <sub>                  Outbound approval for --isolated workspaces (list | allow <host> | revoke <host> | watch)
+  git         <git-args...>                Run host git with repo hooks, editor, pager… pinned (not a security boundary)
+  doctor                                   Health check (macOS, container CLI, volumes)
+  uninstall   [--purge] [--yes]            Remove workspaces' containers/volumes and config (--purge: images, toolchains too)
+  version                                  Print version
+  help                                     Show this help
+
+DISTROS (this release)
+  ubuntu24  (default)   ubuntu:24.04   shared volume: mise-store
+  ubuntu26              ubuntu:26.04   shared volume: mise-store
+
+TOOLS (WRITE-GATED PASS-THROUGH TO MISE)
+  tools use -g node@22          Install & pin global default toolchain
+  tools install python@3.12     Install runtime or tool via mise
+  tools ls                      List all installed tools
+  tools upgrade [tool]          Upgrade tools
+  tools uninstall <tool>        Remove a tool from shared store
+  tools exec <tool> -- <cmd>    Run a command with a tool (= mise exec)
+
+REGISTER OPTIONS
+  -d, --distro NAME       Set base distro (default: ubuntu24)
+  -i, --isolated          Use the workspace-managed internal network
+      --subnet CIDR       Custom network CIDR (e.g. 192.168.120.0/24 or 172.25.0.0/16)
+      --network NAME      Attach to a custom network (cannot combine with --isolated)
+
+RUN OPTIONS
+  -d, --distro NAME       Override distro for this session
+  -i, --isolated          Use the workspace-managed internal network for this session
+      --network NAME      Override network (cannot combine with --isolated)
+  -p, --publish H:C       Bind a port (always locked to 127.0.0.1)
+      --cpus N            CPU limit (default: 4)
+  -m, --memory SIZE       Memory limit (default: 4g)
+
+COMMON WORKFLOWS
+  1. Safe AI Coding Agent:
+       agent-shadow register ~/my-app
+       agent-shadow tools install npm:@anthropic-ai/claude-code
+       agent-shadow run --env ANTHROPIC_API_KEY="$KEY" claude
+       agent-shadow traffic
+
+  2. Interactive Sandbox Shell:
+       agent-shadow run bash
+
+  3. Persistent Background Server (open http://localhost:3000 on Mac):
+       agent-shadow start -p 3000:3000
+       agent-shadow connect
+       agent-shadow stop
+
+  4. Resetting Agent State / Memory (keep project files):
+       agent-shadow wash
+
+  5. Polyglot Tool Management (mise pass-through):
+       agent-shadow tools install node@22 python@3.14
+       agent-shadow tools ls
+
+CUSTOMISATION
+  Append extra Containerfile instructions per distro before WORKDIR /workspace:
+    ~/.config/agent-shadow/Dockerfile.<distro>.append
+
+EGRESS APPROVAL (--isolated workspaces)
+  Isolated workspaces have no direct internet. All HTTP(S) goes through a
+  per-workspace proxy (shadow-proxy-<slug>) with a deny-by-default allowlist
+  (built-in registries/LLM APIs + ~/.config/agent-shadow/allowlist + approvals).
+  During `run`, a denied host opens a macOS Allow/Deny dialog (30s -> Deny);
+  Allow applies to this workspace only - then ask the agent to retry.
+    agent-shadow egress list                 Show approvals and proxy status
+    agent-shadow egress allow api.stripe.com Approve without a dialog
+    agent-shadow egress watch                Dialogs for start/connect sessions
+
+WORKSPACE INTEGRITY (files that can run code on your Mac)
+  After every run/connect session (and on stop after start), agent-shadow warns
+  if git hooks, .git/config, .envrc, .vscode/tasks.json, package.json, Makefile,
+  CI workflows, etc. were added, modified, or removed. Add your own globs, one
+  per line, to:
+    ~/.config/agent-shadow/watch          (e.g. pyproject.toml, gradlew)
+  Commit from the host without running repo-controlled hooks:
+    agent-shadow git commit -m "…"
+
+SESSION PERSISTENCE
+  Agent session state (--resume IDs, auth tokens, shell history) persists across
+  container restarts. /root inside the container is a named volume (home-<slug>)
+  that survives `--rm`. Each registered workspace has its own isolated /root.
+
+EOF
+}
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+main() {
+  local cmd="${1:-help}"
+  shift 2>/dev/null || true
+
+  case "$cmd" in
+    init)              cmd_init       "$@" ;;
+    register)          cmd_register   "$@" ;;
+    unregister)        cmd_unregister "$@" ;;
+    start)             cmd_start      "$@" ;;
+    connect|shell)     cmd_connect    "$@" ;;
+    run)               cmd_run        "$@" ;;
+    stop)              cmd_stop       "$@" ;;
+    wash)              cmd_wash       "$@" ;;
+    tools)             cmd_tools      "$@" ;;
+    list)              cmd_list        "$@" ;;
+    traffic)           cmd_traffic     "$@" ;;
+    doctor)            cmd_doctor      "$@" ;;
+    git)               cmd_git         "$@" ;;
+    egress)            cmd_egress      "$@" ;;
+    uninstall)         cmd_uninstall   "$@" ;;
+    version|--version|-v)
+                       print "agent-shadow ${AGENT_SHADOW_VERSION}" ;;
+    help|--help|-h)    _help ;;
+    *)
+      _err "Unknown command: ${cmd}"
+      _help
+      exit 1
+      ;;
+  esac
+}
+
+main "$@"

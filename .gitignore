@@ -1,0 +1,19 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editor & IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# agent-shadow local testing & generated artifacts
+.config/
+/tmp/agent-shadow*
+tests/tmp/
+
+# Local notes (not committed)
+SCRIBBLED-NOTES.md

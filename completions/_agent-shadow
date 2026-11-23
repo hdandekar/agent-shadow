@@ -1,0 +1,174 @@
+#compdef agent-shadow
+
+_agent_shadow_commands() {
+  local -a commands
+  commands=(
+    'init:Build base image and seed shared mise-store volume'
+    'register:Register a project directory with network and root volume'
+    'unregister:Remove workspace directory from registry'
+    'start:Start background container (keeps ports open)'
+    'connect:Open interactive shell in workspace container'
+    'shell:Alias for connect'
+    'run:Launch or attach to agent inside workspace'
+    'stop:Stop workspace container'
+    'wash:Reset workspace agent state/memory (all-or-nothing)'
+    'tools:Manage shared toolchains and runtimes via mise'
+    'list:List all registered workspaces'
+    'traffic:Audit outbound network traffic and detect unknown external endpoints'
+    'git:Run host git with repo hooks, editor, pager pinned (not a security boundary)'
+    'egress:Outbound approval for isolated workspaces (list, allow, revoke, watch)'
+    'doctor:Run system diagnostics and verify environment'
+    'uninstall:Remove workspaces, their volumes and the config (--purge: images and toolchains too)'
+    'version:Print version'
+    'help:Display help information'
+  )
+  _describe 'command' commands
+}
+
+_agent_shadow_tools_subcommands() {
+  local -a subcommands
+  subcommands=(
+    'use:Install and set tool as global default (e.g. use -g node@22)'
+    'install:Install runtime or tool via mise'
+    'ls:List installed toolchains and runtimes'
+    'upgrade:Upgrade tools to latest versions'
+    'rm:Remove a tool from shared store'
+    'uninstall:Remove a tool from shared store'
+    'exec:Run arbitrary command inside store container'
+  )
+  _describe 'tools subcommand' subcommands
+}
+
+_agent_shadow_distros() {
+  local -a distros
+  distros=('ubuntu24:Ubuntu 24.04 LTS (default)' 'ubuntu26:Ubuntu 26.04 LTS')
+  _describe 'distro' distros
+}
+
+_agent_shadow_agents() {
+  local -a agents
+  agents=(
+    'claude:Anthropic Claude Code CLI'
+    'codex:OpenAI Codex CLI'
+    'agy:Google Antigravity CLI'
+    'opencode:OpenCode AI terminal assistant'
+    'bash:Interactive login bash shell'
+  )
+  _describe 'agent' agents
+}
+
+_agent_shadow() {
+  local curcontext="$curcontext" state line
+  typeset -A opt_args
+
+  _arguments -C \
+    '(-h --help)'{-h,--help}'[Show help information]' \
+    '(-v --version)'{-v,--version}'[Show version information]' \
+    '1: :_agent_shadow_commands' \
+    '*:: :->args'
+
+  case $state in
+    args)
+      case $line[1] in
+        init)
+          _arguments \
+            '(-d --distro)'{-d,--distro}'[Target Linux distribution]:distro:_agent_shadow_distros' \
+            '--subnet[Custom network CIDR (e.g. 192.168.120.0/24)]:_message "CIDR subnet"' \
+            '(-f --force)'{-f,--force}'[Force rebuild of base image even if cached]'
+          ;;
+        register)
+          _arguments \
+            '(-d --distro)'{-d,--distro}'[Target Linux distribution]:distro:_agent_shadow_distros' \
+            '(-i --isolated --network)'{-i,--isolated}'[Use dedicated shadow-<slug>-net network (cannot combine with --network)]' \
+            '--subnet[Custom network CIDR (e.g. 192.168.120.0/24)]:_message "CIDR subnet"' \
+            '(-i --isolated --network)--network[Attach to custom network (cannot combine with --isolated)]:network name:' \
+            '1:workspace directory:_files -/'
+          ;;
+        unregister)
+          _arguments \
+            '1:workspace directory:_files -/'
+          ;;
+        start)
+          _arguments \
+            '(-d --distro)'{-d,--distro}'[Target Linux distribution]:distro:_agent_shadow_distros' \
+            '(-i --isolated --network)'{-i,--isolated}'[Use dedicated shadow-<slug>-net network (cannot combine with --network)]' \
+            '(-i --isolated --network)--network[Attach to custom network (cannot combine with --isolated)]:network name:' \
+            '(-p --publish)'{-p,--publish}'[Publish port to 127.0.0.1 (HOST:CONTAINER)]:_message "host:container"' \
+            '--env[Set environment variable in container]:_message "KEY[=VALUE]"' \
+            '--env-file[Read environment variables from file]:_files' \
+            '--cpus[CPU limit]:cpus:(2 4 8)' \
+            '(-m --memory)'{-m,--memory}'[Memory limit]:memory:(2g 4g 8g 16g)' \
+            '1:workspace directory:_files -/'
+          ;;
+        connect|shell)
+          _arguments \
+            '(-i --isolated --network)'{-i,--isolated}'[Expect the container on shadow-<slug>-net (cannot combine with --network)]' \
+            '(-i --isolated --network)--network[Expect the container on this network (cannot combine with --isolated)]:network name:' \
+            '1:workspace directory:_files -/'
+          ;;
+        stop)
+          _arguments \
+            '(-a --all)'{-a,--all}'[Stop all agent-shadow containers]' \
+            '1:workspace directory:_files -/'
+          ;;
+        wash)
+          _arguments \
+            '(-f --force)'{-f,--force}'[Skip confirmation prompt]' \
+            '1:workspace directory:_files -/'
+          ;;
+        run)
+          _arguments \
+            '(-d --distro)'{-d,--distro}'[Override distribution]:distro:_agent_shadow_distros' \
+            '(-i --isolated --network)'{-i,--isolated}'[Use dedicated shadow-<slug>-net network (cannot combine with --network)]' \
+            '(-i --isolated --network)--network[Override network name (cannot combine with --isolated)]:network name:' \
+            '(-p --publish)'{-p,--publish}'[Publish port to 127.0.0.1 (HOST:CONTAINER)]:_message "host:container"' \
+            '--env[Set environment variable in container]:_message "KEY[=VALUE]"' \
+            '--env-file[Read environment variables from file]:_files' \
+            '--cpus[CPU limit]:cpus:(2 4 8)' \
+            '(-m --memory)'{-m,--memory}'[Memory limit]:memory:(2g 4g 8g 16g)' \
+            '1:agent:_agent_shadow_agents' \
+            '*:extra arguments:_default'
+          ;;
+        tools)
+          local subcmd_state
+          _arguments -C \
+            '(-d --distro)'{-d,--distro}'[Target Linux distribution]:distro:_agent_shadow_distros' \
+            '1: :_agent_shadow_tools_subcommands' \
+            '*:: :->subargs'
+
+          case $state in
+            subargs)
+              case $line[1] in
+                install|update|uninstall)
+                  _message "tool spec (e.g. python@3.12, node@22, npm:@anthropic-ai/claude-code)"
+                  ;;
+                exec)
+                  _message "command to execute inside container"
+                  ;;
+              esac
+              ;;
+          esac
+          ;;
+        traffic)
+          _arguments \
+            '(-a --all)'{-a,--all}'[Show all recorded calls including allowlisted]' \
+            '(-f --follow)'{-f,--follow}'[Stream unique network calls live in real time]' \
+            '(-c --clear)'{-c,--clear}'[Clear recorded network traffic log]' \
+            '1:workspace directory:_files -/'
+          ;;
+        git)
+          _dispatch git git
+          ;;
+        egress)
+          local -a egress_subs
+          egress_subs=('list:Show approvals and proxy status' 'allow:Approve a host for this workspace' 'revoke:Remove an approved host' 'watch:Open Allow/Deny dialogs for denied hosts')
+          _describe 'egress subcommand' egress_subs
+          ;;
+        doctor|list|version|help)
+          ;;
+      esac
+      ;;
+  esac
+}
+
+_agent_shadow "$@"

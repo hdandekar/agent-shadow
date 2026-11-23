@@ -1,0 +1,52 @@
+# agent-shadow base image. agent-shadow depends on everything in this file; don't edit it.
+# Add your own layers in ~/.config/agent-shadow/Dockerfile.<distro>.append: `agent-shadow init`
+# inserts that file where marked below. Pins come from helpers.zsh as build arguments.
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+ARG MISE_VERSION
+ARG MISE_SHA256
+
+ENV MISE_DATA_DIR=/opt/mise \
+    MISE_GLOBAL_CONFIG_FILE=/opt/mise/config.toml \
+    RUSTUP_HOME=/opt/mise/rustup \
+    CARGO_HOME=/root/.cargo \
+    MISE_CACHE_DIR=/tmp/mise/cache \
+    MISE_TMP_DIR=/tmp/mise/tmp \
+    BASH_ENV=/etc/profile.d/mise.sh \
+    DEBIAN_FRONTEND=noninteractive \
+    PATH="/opt/mise/shims:/opt/mise/bin:/usr/local/bin:$PATH"
+
+# ca-certificates, curl, git: mise and agents. unzip, xz-utils: archives mise unpacks.
+# tcpdump, e2fsprogs (chattr): `agent-shadow traffic`. No compilers: mise installs prebuilt
+# Node, Python and Java; add build-essential in your .append file if a tool needs one.
+RUN apt-get update -y && \
+    apt-get install -y --no-install-recommends ca-certificates curl git unzip xz-utils tcpdump e2fsprogs && \
+    rm -rf /var/lib/apt/lists/*
+
+# /workspace is owned by your Mac user; without this git refuses it ("dubious ownership")
+RUN git config --system --add safe.directory '*'
+
+# mise, pinned by version and SHA-256 (Apple container runs arm64 Linux only)
+RUN arch="$(uname -m)" && \
+    case "$arch" in aarch64|arm64) ;; *) echo "mise pin only covers arm64 (got $arch)" >&2; exit 1 ;; esac && \
+    curl -fsSL -o /usr/local/bin/mise \
+      "https://github.com/jdx/mise/releases/download/v${MISE_VERSION}/mise-v${MISE_VERSION}-linux-arm64" && \
+    echo "${MISE_SHA256}  /usr/local/bin/mise" | sha256sum -c - && \
+    chmod +x /usr/local/bin/mise && \
+    mkdir -p /opt/mise/bin /root/.local/bin && \
+    cp -f /usr/local/bin/mise /opt/mise/bin/mise && \
+    ln -sf /usr/local/bin/mise /root/.local/bin/mise && \
+    mise --version && mise settings set experimental true
+
+COPY profile.sh /etc/profile.d/mise.sh
+COPY rm-guard.sh /usr/local/bin/rm
+COPY entrypoint.sh traffic-monitor.sh /usr/local/bin/
+COPY traffic-filter.awk /usr/local/lib/agent-shadow/traffic-filter.awk
+RUN chmod 755 /etc/profile.d/mise.sh /usr/local/bin/rm /usr/local/bin/entrypoint.sh /usr/local/bin/traffic-monitor.sh && \
+    echo '[ -f /etc/profile.d/mise.sh ] && . /etc/profile.d/mise.sh' >> /etc/bash.bashrc
+
+# --- Dockerfile.<distro>.append is inserted here ---
+
+WORKDIR /workspace
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["/bin/bash", "--login"]
