@@ -2,7 +2,7 @@ class AgentShadow < Formula
   desc "Run coding agents in per-project Apple Container workspaces"
   homepage "https://github.com/hdandekar/agent-shadow"
   url "https://github.com/hdandekar/agent-shadow/archive/refs/tags/v0.1.3.tar.gz"
-  sha256 "91bd0a1ac584c13c5311b3da82a948fad883d21ae4774c58f2ee862398969398"
+  sha256 "68384ca775a26c79939b67502bae9c9f72050e37cc9144fd55a2f53bef6e6dc1"
   license "MIT"
 
   # Apple's container CLI is in homebrew-core (Formula/c/container.rb).
