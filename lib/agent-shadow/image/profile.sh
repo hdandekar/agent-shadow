@@ -28,3 +28,11 @@ fi
 if [ -n "${GIT_FALLBACK_EMAIL:-}" ] && ! git config --global user.email >/dev/null 2>&1; then
   git config --global user.email "$GIT_FALLBACK_EMAIL"
 fi
+
+# Interactive bash: a prompt that can't be mistaken for a Mac terminal, in the orange of the
+# Mac-side [agent-shadow] output (256-colour 208). A PS1 set in /root/.bashrc (read later) wins.
+if [ -n "${BASH_VERSION:-}" ]; then
+  case "$-" in
+    *i*) PS1='\[\e[38;5;208m\][agent-shadow:${AGENT_SHADOW_WORKSPACE:-?}]\[\e[0m\] \[\e[1;34m\]\w\[\e[0m\] \$ ' ;;
+  esac
+fi

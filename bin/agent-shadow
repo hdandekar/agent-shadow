@@ -73,7 +73,7 @@ DISTROS (this release)
   ubuntu26              ubuntu:26.04   shared volume: mise-store
 
 TOOLS (WRITE-GATED PASS-THROUGH TO MISE)
-  tools use -g node@22          Install & pin global default toolchain
+  tools use -g node@24          Install & pin global default toolchain
   tools install python@3.12     Install runtime or tool via mise
   tools ls                      List all installed tools
   tools upgrade [tool]          Upgrade tools
@@ -99,7 +99,7 @@ RUN OPTIONS
 COMMON WORKFLOWS
   1. Safe AI Coding Agent:
        agent-shadow register ~/my-app
-       agent-shadow tools use -g node@22
+       agent-shadow tools use -g node@24
        agent-shadow tools use -g npm:@anthropic-ai/claude-code
        agent-shadow run claude
        agent-shadow traffic
@@ -116,7 +116,7 @@ COMMON WORKFLOWS
        agent-shadow wash
 
   5. Polyglot Tool Management (mise pass-through):
-       agent-shadow tools install node@22 python@3.14
+       agent-shadow tools install node@24 python@3.14
        agent-shadow tools ls
 
 CUSTOMISATION

@@ -32,7 +32,7 @@ is created if missing and never removed. Approval dialogs are suppressed.
 | :--- | :--- |
 | setup | `init`, `register`, `register --isolated`, `tools use -g` work without a terminal |
 | tools | toolchains installed with `tools` are on PATH in a session; `tools` refuses while a session runs |
-| run | project mounted read-write at `/workspace`; a subfolder maps to the same subfolder; `/opt/mise` read-only; `mise install` in a session explains what to do; `/root` persists per workspace; `--env`, `--env KEY`, `--env-file` arrive; the exit code is returned; a git hook written by the session is reported |
+| run | project mounted read-write at `/workspace`; a subfolder maps to the same subfolder; `/opt/mise` read-only; `mise install` in a session explains what to do; `/root` persists per workspace; `--env`, `--env KEY`, `--env-file` arrive; the exit code is returned; an interactive shell's prompt names the workspace; a git hook written by the session is reported |
 | lifecycle | `start -p` publishes on 127.0.0.1 only (not on the Mac's network address); `connect` and an attaching `run` get the toolchains and `--env-file`; `stop` reports files changed since `start` and removes the container |
 | network | a running container is reused only on the requested network (shared vs `--isolated`, for `run` and `connect`); a refused run starts no proxy; `stop` stops the workspace's proxy |
 | egress | an `--isolated` network has no direct internet; an allowlisted registry works through the proxy; other hosts are refused and reported; `egress allow` takes effect; approval during a session works on retry and is stored for that workspace only; the proxy stops with the session |
@@ -68,10 +68,10 @@ touching other tools' containers, …) and runs the `make e2e` sections that sho
 The unmodified copy is run first; if that baseline fails, the mutant results mean nothing.
 
 **Why it is slow:** every mutant is a separate `make e2e` run of its sections, setup included
-(`init` check, two `register`s, `tools use -g node@22`), and every `run` boots a fresh VM. With 22 Mac
+(`init` check, two `register`s, `tools use -g node@24`), and every `run` boots a fresh VM. With 24 Mac
 mutants plus the baseline, expect roughly 40–70 minutes (not measured). Use `--only` to check a few.
-The last mutant (`traffic-awk-buffered`) changes an image script, so the test image is rebuilt for it, and once
-more by your next `make e2e`: a few extra minutes each.
+The last two mutants (`traffic-awk-buffered`, `prompt-missing`) change an image script, so the test image is
+rebuilt for each, and once more by your next `make e2e`: a few extra minutes each.
 
 ## 3. Two checks a script can't judge
 

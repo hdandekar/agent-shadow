@@ -77,6 +77,7 @@ _session_container_args() {
   # persistent /root volume and should be found next session, without shadowing system tools.
   a+=(--env "PATH=/opt/mise/shims:/opt/mise/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/root/.local/bin")
   a+=(--env "MISE_GLOBAL_CONFIG_FILE=/opt/mise/config.toml" --env "TERM=${TERM:-xterm-256color}")
+  a+=(--env "AGENT_SHADOW_WORKSPACE=${slug}")   # shown in the shell prompt (profile.sh)
   local pub host_port container_port
   for pub in "${S_PUBLISH[@]}"; do
     case "$pub" in

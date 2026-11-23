@@ -57,7 +57,7 @@ agent-shadow init
 agent-shadow register ~/work/my-app
 
 # 3. Once per Mac: install the tools the sessions should have.
-agent-shadow tools use -g node@22
+agent-shadow tools use -g node@24
 agent-shadow tools use -g npm:@anthropic-ai/claude-code
 
 # 4. Every time: run the agent from the project folder (or any folder below it).
@@ -83,7 +83,7 @@ project. Prefer an API key? `agent-shadow run --env ANTHROPIC_API_KEY claude` pa
 | opencode | `agent-shadow tools use -g npm:opencode-ai` | `agent-shadow run opencode` |
 | a shell | nothing | `agent-shadow run bash` |
 
-The `npm:` ones need Node first (`agent-shadow tools use -g node@22`). Use `use -g`, not `install`:
+The `npm:` ones need Node first (`agent-shadow tools use -g node@24`). Use `use -g`, not `install`:
 `install` only downloads, while `use -g` also puts the tool on `PATH` in every session.
 
 ---
@@ -99,6 +99,9 @@ agent-shadow run bash                     # a shell, to run tests or try things
 agent-shadow run bash -c 'npm test'       # one command, then exit; its exit code is returned
 agent-shadow run --env-file .env bash     # options for agent-shadow go before the program name
 ```
+
+A shell in the VM shows `[agent-shadow:<project>]` in orange before the path, so you can tell it from a Mac
+terminal (a `PS1` in that project's `/root/.bashrc` replaces it).
 
 Every `run` starts a fresh container and removes it when you exit. What survives:
 
@@ -193,7 +196,7 @@ so it is for review, not protection. To block traffic, use `--isolated`.
 agent-shadow tools use -g python@3.14     # install and activate for every project
 agent-shadow tools ls
 agent-shadow tools upgrade node
-agent-shadow tools use -g node@22.12.0    # go back to an exact version
+agent-shadow tools use -g node@24.11.1    # go back to an exact version
 agent-shadow tools uninstall python@3.12
 ```
 

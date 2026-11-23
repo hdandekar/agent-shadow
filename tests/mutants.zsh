@@ -138,11 +138,17 @@ m uninstall-unscoped mac:uninstall lib/agent-shadow/cmd_uninstall.zsh \
 m run-unsafe-container-name mac:run lib/agent-shadow/cmd_run.zsh \
   '  agent_id="${${agent_id//[^a-z0-9]/-}:-agent}"' '  true' \
   "a program name with '@' or '.' becomes an invalid container name"
-# Last on purpose: it changes an image file, so the test image is rebuilt for it (and once more by
-# the next normal run). Only the image's awk (mawk) buffers pipes; macOS's awk can't show it.
+m prompt-no-workspace mac:run lib/agent-shadow/session.zsh \
+  '  a+=(--env "AGENT_SHADOW_WORKSPACE=${slug}")' '  true' \
+  "run and start no longer pass the workspace name the prompt shows"
+# Last on purpose: these change an image file, so the test image is rebuilt for each (and once more
+# by the next normal run). Only the image's awk (mawk) buffers pipes; macOS's awk can't show it.
 m traffic-awk-buffered mac:traffic lib/agent-shadow/image/traffic-monitor.sh \
   'awk -W version </dev/null 2>/dev/null | grep mawk >/dev/null && AWK="awk -W interactive"' 'true' \
   "connections of a short session are never recorded (mawk buffers the pipe)"
+m prompt-missing mac:run lib/agent-shadow/image/profile.sh \
+  "    *i*) PS1=" "    *i*) _PS1=" \
+  "interactive shells get Ubuntu's plain prompt instead of the agent-shadow one"
 
 
 # ---------------------------------------------------------------------------

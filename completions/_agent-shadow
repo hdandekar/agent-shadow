@@ -28,7 +28,7 @@ _agent_shadow_commands() {
 _agent_shadow_tools_subcommands() {
   local -a subcommands
   subcommands=(
-    'use:Install and set tool as global default (e.g. use -g node@22)'
+    'use:Install and set tool as global default (e.g. use -g node@24)'
     'install:Install runtime or tool via mise'
     'ls:List installed toolchains and runtimes'
     'upgrade:Upgrade tools to latest versions'
@@ -140,7 +140,7 @@ _agent_shadow() {
             subargs)
               case $line[1] in
                 install|update|uninstall)
-                  _message "tool spec (e.g. python@3.12, node@22, npm:@anthropic-ai/claude-code)"
+                  _message "tool spec (e.g. python@3.12, node@24, npm:@anthropic-ai/claude-code)"
                   ;;
                 exec)
                   _message "command to execute inside container"

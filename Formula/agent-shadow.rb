@@ -22,7 +22,7 @@ class AgentShadow < Formula
       Get started:
         agent-shadow init                           # build the images, create toolchain volume and network
         agent-shadow register ~/work/my-project
-        agent-shadow tools use -g node@22 npm:@anthropic-ai/claude-code
+        agent-shadow tools use -g node@24 npm:@anthropic-ai/claude-code
         cd ~/work/my-project && agent-shadow run claude
 
       Add your own image layers in ~/.config/agent-shadow/Dockerfile.ubuntu24.append,

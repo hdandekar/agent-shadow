@@ -9,7 +9,7 @@
 #   the store container, followed by `mise reshim` to refresh shims.
 #
 # USAGE EXAMPLES
-#   agent-shadow tools use -g node@22
+#   agent-shadow tools use -g node@24
 #   agent-shadow tools install python@3.12
 #   agent-shadow tools install java@temurin-21
 #   agent-shadow tools install npm:@anthropic-ai/claude-code
@@ -84,7 +84,7 @@ cmd_tools() {
   done
 
   if (( ${#mise_args} == 0 )); then
-    _die "Usage: agent-shadow tools [--distro NAME] <mise-command> [args...]\n\n  Direct pass-through to mise inside the store container with write access.\n\n  Examples:\n    agent-shadow tools use -g node@22\n    agent-shadow tools install python@3.12\n    agent-shadow tools ls\n    agent-shadow tools upgrade node\n    agent-shadow tools uninstall python@3.12\n    agent-shadow tools exec node@22 -- node --version"
+    _die "Usage: agent-shadow tools [--distro NAME] <mise-command> [args...]\n\n  Direct pass-through to mise inside the store container with write access.\n\n  Examples:\n    agent-shadow tools use -g node@24\n    agent-shadow tools install python@3.12\n    agent-shadow tools ls\n    agent-shadow tools upgrade node\n    agent-shadow tools uninstall python@3.12\n    agent-shadow tools exec node@24 -- node --version"
   fi
 
   # Normalize common alias 'update' -> mise's native 'upgrade'

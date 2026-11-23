@@ -163,7 +163,7 @@ as register "$W1";           need "register shared workspace"
 as register --isolated "$W2"; need "register isolated workspace"
 S1="$(grep -F "|${W1}|" "$REG" | cut -d'|' -f1)"; S2="$(grep -F "|${W2}|" "$REG" | cut -d'|' -f1)"
 _say "slugs: ${S1} (shared), ${S2} (isolated)"
-as tools use -g node@22;     need "tools use -g node@22 (into ${AGENT_SHADOW_MISE_VOLUME})"
+as tools use -g node@24;     need "tools use -g node@24 (into ${AGENT_SHADOW_MISE_VOLUME})"
 
 stop_all_test() { local d; for d in "$W1" "$W2"; do (cd "$d" && "$BIN" stop >/dev/null 2>&1 </dev/null) || true; done; }
 
@@ -213,6 +213,8 @@ sec_run() {
   as run ./e2e@tool.sh
   expect_in "run ./e2e@tool.sh works (container name is derived safely from the program name)" "BY-PATH-OK"
   rm -f "${W1}/e2e@tool.sh"
+  as run bash -ic 'printf "PROMPT=%s\n" "${PS1@P}"'
+  expect_in "an interactive shell's prompt names the workspace" "[agent-shadow:${W1:t}]"
   as run bash -c 'echo "#!/bin/sh" > /workspace/.git/hooks/pre-commit'
   expect_in "a git hook written by the session is reported" "added     .git/hooks/pre-commit"
   rm -f "${W1}/.git/hooks/pre-commit"

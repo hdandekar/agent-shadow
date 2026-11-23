@@ -12,7 +12,7 @@ A `#!/bin/zsh` CLI (`bin/agent-shadow` and `lib/agent-shadow/*.zsh`), a checkout
    - Entry point: `bin/agent-shadow` (help text, argument handling, dispatch; ~200 lines).
    - Modular library in `lib/agent-shadow/` (`helpers.zsh`, `image.zsh`, `session.zsh`, `cmd_init.zsh`, `cmd_register.zsh`, `cmd_start.zsh`, `cmd_connect.zsh`, `cmd_run.zsh`, `cmd_stop.zsh`, `cmd_wash.zsh`, `cmd_tools.zsh`, `cmd_doctor.zsh`, `cmd_uninstall.zsh`, `cmd_traffic.zsh`, `cmd_git.zsh`, `integrity.zsh`, `egress.zsh`).
    - Native Zsh completion at `completions/_agent-shadow`.
-   - Output prefix `[agent-shadow]` is 256-colour orange (`%F{208}`), chosen to stay distinct from common zsh themes (robbyrussell uses cyan/green/red/blue) across Apple Terminal profiles. Don't switch it back to a basic ANSI colour.
+   - Output prefix `[agent-shadow]` is 256-colour orange (`%F{208}`), chosen to stay distinct from common zsh themes (robbyrussell uses cyan/green/red/blue) across Apple Terminal profiles. Don't switch it back to a basic ANSI colour. The in-container bash prompt (`profile.sh`, `[agent-shadow:<slug>]` from `AGENT_SHADOW_WORKSPACE`) uses the same 208.
 
 2. **Distribution Scope:**
    - **Phase 1 (Active):** `ubuntu24` (default, `ubuntu:24.04`) and `ubuntu26` (`ubuntu:26.04`).
