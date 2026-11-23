@@ -23,6 +23,12 @@ cmd_run() {
   _reject_isolated_custom_network "run" "$S_ISOLATED" "$S_NET"
   [[ -n "$agent" ]] || \
     _die "Usage: agent-shadow run [opts] <agent> [args...]\n  Example: agent-shadow run claude\n           agent-shadow run bash"
+  # `run` starts a program; versions are chosen when installing it
+  [[ "$agent" == *@* && "$agent" != */* ]] && \
+    _die "'${agent}' looks like a tool version: run takes the program's name.\n  Run it:     agent-shadow run ${agent%%@*}\n  Pick the version with: agent-shadow tools use -g ${agent}"
+  # Container names allow only [a-z0-9-]: derive the name part from the program's basename
+  local agent_id="${${agent:t}:l}"
+  agent_id="${${agent_id//[^a-z0-9]/-}:-agent}"
 
   # Find the registered workspace from $PWD upward. Resolve symlinks: register stores ${dir:A}.
   local cwd="${PWD:A}"
@@ -53,8 +59,8 @@ cmd_run() {
   local target="" fix=""
   if _container_names | grep -xF -- "agent-${slug}" >/dev/null; then
     target="agent-${slug}"; fix="Stop it and run again:  agent-shadow stop ${slug}"
-  elif _container_names | grep -xF -- "agent-${agent}-${slug}" >/dev/null; then
-    target="agent-${agent}-${slug}"
+  elif _container_names | grep -xF -- "agent-${agent_id}-${slug}" >/dev/null; then
+    target="agent-${agent_id}-${slug}"
     fix="Exit the other 'agent-shadow run ${agent}' session in this workspace (or: container stop ${target}), then run again."
   fi
   [[ -n "$target" ]] && _require_same_network "$target" "$net" "$fix"
@@ -92,7 +98,7 @@ cmd_run() {
   _info "Home vol  : home-${slug} → /root (rw)"
   _info "Mise vol  : ${MISE_VOLUME[$distro]} → /opt/mise (ro)"
 
-  _session_container_args "agent-${agent}-${slug}" "$net" "$workspace_root" "$slug" "$distro" "$container_cwd"
+  _session_container_args "agent-${agent_id}-${slug}" "$net" "$workspace_root" "$slug" "$distro" "$container_cwd"
   local -a run_args=(--rm --interactive "${tty_arg[@]}" "${reply[@]}" "${egress_env[@]}")
 
   # Non-interactive commands (`run bash -c …`) get live egress progress lines;

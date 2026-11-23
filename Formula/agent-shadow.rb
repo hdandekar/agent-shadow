@@ -1,7 +1,7 @@
 class AgentShadow < Formula
   desc "Run coding agents in per-project Apple Container workspaces"
   homepage "https://github.com/hdandekar/agent-shadow"
-  url "https://github.com/hdandekar/agent-shadow/archive/refs/tags/v0.1.0.tar.gz"
+  url "https://github.com/hdandekar/agent-shadow/archive/refs/tags/v0.1.1.tar.gz"
   sha256 "178f5ea57c1f194daf90c0934cac8c7db65257e1fe68d47a13fa1a577e8cf081"
   license "MIT"
 
@@ -36,6 +36,6 @@ class AgentShadow < Formula
   end
 
   test do
-    assert_match "agent-shadow 0.1.0", shell_output("#{bin}/agent-shadow --version")
+    assert_match "agent-shadow 0.1.1", shell_output("#{bin}/agent-shadow --version")
   end
 end

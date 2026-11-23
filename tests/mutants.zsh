@@ -62,6 +62,9 @@ m guardrail-allows-workspace unit lib/agent-shadow/image/rm-guard.sh \
 m traffic-hides-dot1 unit lib/agent-shadow/image/traffic-filter.awk \
   'if (ip !~ /^127\./ && ip != "0.0.0.0")' 'if (ip !~ /^127\./ && ip !~ /\.1$/ && ip != "0.0.0.0")' \
   "traffic hides every address ending in .1, including the Mac (gateway) and 1.1.1.1"
+m run-accepts-version unit lib/agent-shadow/cmd_run.zsh \
+  '  [[ "$agent" == *@* && "$agent" != */* ]] && \' '  false && \' \
+  "run agy@latest gets no hint (and fails later with an invalid container name)"
 m image-append-dropped unit lib/agent-shadow/image.zsh \
   '      cat "$append"; print' '      true' "the user's .append layers are left out of the image"
 m image-hash-ignores-pins unit lib/agent-shadow/image.zsh \
@@ -132,6 +135,9 @@ m uninstall-unscoped mac:uninstall lib/agent-shadow/cmd_uninstall.zsh \
   '  for c in ${(f)"$(_container_names)"}; do [[ "$c" == agent-* ]] && cnames+=("$c"); done' \
   "uninstall removes other tools' agent-* containers"
 
+m run-unsafe-container-name mac:run lib/agent-shadow/cmd_run.zsh \
+  '  agent_id="${${agent_id//[^a-z0-9]/-}:-agent}"' '  true' \
+  "a program name with '@' or '.' becomes an invalid container name"
 # Last on purpose: it changes an image file, so the test image is rebuilt for it (and once more by
 # the next normal run). Only the image's awk (mawk) buffers pipes; macOS's awk can't show it.
 m traffic-awk-buffered mac:traffic lib/agent-shadow/image/traffic-monitor.sh \

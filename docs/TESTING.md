@@ -68,7 +68,7 @@ touching other tools' containers, …) and runs the `make e2e` sections that sho
 The unmodified copy is run first; if that baseline fails, the mutant results mean nothing.
 
 **Why it is slow:** every mutant is a separate `make e2e` run of its sections, setup included
-(`init` check, two `register`s, `tools use -g node@22`), and every `run` boots a fresh VM. With 21 Mac
+(`init` check, two `register`s, `tools use -g node@22`), and every `run` boots a fresh VM. With 22 Mac
 mutants plus the baseline, expect roughly 40–70 minutes (not measured). Use `--only` to check a few.
 The last mutant (`traffic-awk-buffered`) changes an image script, so the test image is rebuilt for it, and once
 more by your next `make e2e`: a few extra minutes each.

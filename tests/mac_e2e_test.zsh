@@ -208,6 +208,11 @@ sec_run() {
   expect_in "--env KEY=VAL, --env KEY (from the Mac) and --env-file arrive" "A=1 H=fromhost F=fromfile"
   as run bash -c 'exit 7'
   expect_rc "the session's exit code is returned" 7
+  # A program given by path whose name has characters container names don't allow ('@', '.')
+  print -l '#!/bin/sh' 'echo BY-PATH-OK' > "${W1}/e2e@tool.sh"; chmod +x "${W1}/e2e@tool.sh"
+  as run ./e2e@tool.sh
+  expect_in "run ./e2e@tool.sh works (container name is derived safely from the program name)" "BY-PATH-OK"
+  rm -f "${W1}/e2e@tool.sh"
   as run bash -c 'echo "#!/bin/sh" > /workspace/.git/hooks/pre-commit'
   expect_in "a git hook written by the session is reported" "added     .git/hooks/pre-commit"
   rm -f "${W1}/.git/hooks/pre-commit"

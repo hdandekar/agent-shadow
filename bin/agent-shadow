@@ -91,14 +91,17 @@ RUN OPTIONS
   -i, --isolated          Use the workspace-managed internal network for this session
       --network NAME      Override network (cannot combine with --isolated)
   -p, --publish H:C       Bind a port (always locked to 127.0.0.1)
+      --env KEY[=VALUE]   Pass an environment variable (repeatable)
+      --env-file FILE     Load environment variables from a file
       --cpus N            CPU limit (default: 4)
   -m, --memory SIZE       Memory limit (default: 4g)
 
 COMMON WORKFLOWS
   1. Safe AI Coding Agent:
        agent-shadow register ~/my-app
-       agent-shadow tools install npm:@anthropic-ai/claude-code
-       agent-shadow run --env ANTHROPIC_API_KEY="$KEY" claude
+       agent-shadow tools use -g node@22
+       agent-shadow tools use -g npm:@anthropic-ai/claude-code
+       agent-shadow run claude
        agent-shadow traffic
 
   2. Interactive Sandbox Shell:

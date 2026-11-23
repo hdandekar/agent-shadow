@@ -126,6 +126,10 @@ assert_equal "unregister by slug removes it" "0" "$(grep -c '/myapp|' "$regfile"
 assert_equal "unregister of an unknown folder fails" "1" "$(rc_of "$BIN" unregister "${T}/x/myapp")"
 out="$("$BIN" register --isolated --network custom "${T}/z/My App!" 2>&1)" && rc=0 || rc=$?
 assert_equal "--isolated and --network together are refused" "1" "$rc"
+out="$(cd "${T}/z/My App!" && "$BIN" run agy@latest 2>&1)" && rc=0 || rc=$?
+assert_equal "run with a tool version (agy@latest) is refused" "1" "$rc"
+assert_contains "…and says to run the program by name" "Run it:     agent-shadow run agy" "$out"
+assert_contains "…and where versions are chosen" "agent-shadow tools use -g agy@latest" "$out"
 
 # ---------------------------------------------------------------------------
 section "rm guardrail (the image's /usr/local/bin/rm, run on the host)"
