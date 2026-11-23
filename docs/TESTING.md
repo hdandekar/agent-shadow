@@ -31,16 +31,16 @@ is created if missing and never removed. Approval dialogs are suppressed.
 | Section | agent-shadow behaviour each check protects |
 | :--- | :--- |
 | setup | `init`, `register`, `register --isolated`, `tools use -g` work without a terminal |
-| tools | toolchains installed with `tools` are on PATH in a session; `tools` refuses while a session runs |
-| run | project mounted read-write at `/workspace`; a subfolder maps to the same subfolder; `/opt/mise` read-only; `mise install` in a session explains what to do; `/root` persists per workspace; `--env`, `--env KEY`, `--env-file` arrive; the exit code is returned; an interactive shell's prompt names the workspace; a git hook written by the session is reported |
-| lifecycle | `start -p` publishes on 127.0.0.1 only (not on the Mac's network address); `connect` and an attaching `run` get the toolchains and `--env-file`; `stop` reports files changed since `start` and removes the container |
+| tools | toolchains installed with `tools` are on PATH in a session; `tools` refuses while a session runs, names it, and stops nothing; `tools --stop` stops it and runs mise |
+| run | the container is removed when the program exits (also an interactive shell); project mounted read-write at `/workspace`; a subfolder maps to the same subfolder; `/opt/mise` read-only; `mise install` in a session explains what to do; `/root` persists per workspace; `--env`, `--env KEY`, `--env-file` arrive; the exit code is returned; an interactive shell's prompt names the workspace; a git hook written by the session is reported |
+| lifecycle | `list` shows the background container as running; `start -p` publishes on 127.0.0.1 only (not on the Mac's network address); `connect` and an attaching `run` get the toolchains and `--env-file`; `stop` reports files changed since `start` and removes the container |
 | network | a running container is reused only on the requested network (shared vs `--isolated`, for `run` and `connect`); a refused run starts no proxy; `stop` stops the workspace's proxy |
 | egress | an `--isolated` network has no direct internet; an allowlisted registry works through the proxy; other hosts are refused and reported; `egress allow` takes effect; approval during a session works on retry and is stored for that workspace only; the proxy stops with the session |
 | wash | `/root` is emptied, project files are untouched |
 | registry | two folders with the same name get separate slugs and separate `/root`; `unregister` by path removes only that folder |
 | traffic | a host not on the allowlist is listed; `'*.example.org'` covers `example.org` exactly as in the proxy; a connection to the Mac (gateway) is listed and labelled; `--all`, `--clear` |
 | doctor | finds the images; reports a registered folder that is gone; reports an image built from an older template, and `run` warns about it but still runs |
-| stopall | `stop --all` stops workspace containers and leaves another `agent-*` container running |
+| stopall | `stop --all` stops workspace containers and leaves another `agent-*` container running; `tools --stop` refuses while that container runs and leaves it alone |
 | uninstall | `./install.sh` installs a working command; `agent-shadow uninstall --yes` removes the workspaces' containers, volumes and isolated networks, the CLI and config, and keeps unrelated `agent-*`/`home-*`/`shadow-*` resources, the images, the toolchain volume and `shadow-net` |
 
 **Reading the result:** every line is `✓ PASS`, `✗ FAIL` or `- SKIP (reason)`; nothing only warns.
@@ -68,7 +68,7 @@ touching other tools' containers, …) and runs the `make e2e` sections that sho
 The unmodified copy is run first; if that baseline fails, the mutant results mean nothing.
 
 **Why it is slow:** every mutant is a separate `make e2e` run of its sections, setup included
-(`init` check, two `register`s, `tools use -g node@24`), and every `run` boots a fresh VM. With 24 Mac
+(`init` check, two `register`s, `tools use -g node@24`), and every `run` boots a fresh VM. With 28 Mac
 mutants plus the baseline, expect roughly 40–70 minutes (not measured). Use `--only` to check a few.
 The last two mutants (`traffic-awk-buffered`, `prompt-missing`) change an image script, so the test image is
 rebuilt for each, and once more by your next `make e2e`: a few extra minutes each.

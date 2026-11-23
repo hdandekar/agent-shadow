@@ -13,7 +13,7 @@ _agent_shadow_commands() {
     'stop:Stop workspace container'
     'wash:Reset workspace agent state/memory (all-or-nothing)'
     'tools:Manage shared toolchains and runtimes via mise'
-    'list:List all registered workspaces'
+    'list:List registered workspaces and what is running in each'
     'traffic:Audit outbound network traffic and detect unknown external endpoints'
     'git:Run host git with repo hooks, editor, pager pinned (not a security boundary)'
     'egress:Outbound approval for isolated workspaces (list, allow, revoke, watch)'
@@ -133,6 +133,7 @@ _agent_shadow() {
           local subcmd_state
           _arguments -C \
             '(-d --distro)'{-d,--distro}'[Target Linux distribution]:distro:_agent_shadow_distros' \
+            '--stop[Stop running sessions first (they mount the toolchains)]' \
             '1: :_agent_shadow_tools_subcommands' \
             '*:: :->subargs'
 

@@ -59,7 +59,7 @@ COMMANDS
   stop        [dir] [--all]                Stop active workspace container
   wash        [dir] [--force]              Reset workspace agent state/memory (all-or-nothing)
   tools       [opts] <mise-args...>        Run mise commands with write access to toolchains
-  list                                     List all registered workspaces
+  list                                     List registered workspaces and what is running in each
   traffic     [dir] [opts]                 Audit outbound network calls (opts: --all, --follow, --clear)
   egress      [dir] <sub>                  Outbound approval for --isolated workspaces (list | allow <host> | revoke <host> | watch)
   git         <git-args...>                Run host git with repo hooks, editor, pager… pinned (not a security boundary)
@@ -79,6 +79,7 @@ TOOLS (WRITE-GATED PASS-THROUGH TO MISE)
   tools upgrade [tool]          Upgrade tools
   tools uninstall <tool>        Remove a tool from shared store
   tools exec <tool> -- <cmd>    Run a command with a tool (= mise exec)
+  tools --stop use -g <tool>    Stop running sessions first (asked interactively otherwise)
 
 REGISTER OPTIONS
   -d, --distro NAME       Set base distro (default: ubuntu24)

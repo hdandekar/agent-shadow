@@ -272,14 +272,26 @@ _registry_slug_for() {
 # 0 if a container name belongs to a registered workspace (agent-<slug>, agent-<agent>-<slug>,
 # shadow-proxy-<slug>). Commands that act on "all" containers use this, never a bare
 # name prefix: other tools' containers can also be called agent-*.
-_shadow_owns_container() {
-  local name="$1" slug abspath rest
+_shadow_owns_container() { _container_owner "$1"; }
+
+# _container_owner <container name> : which registered workspace a container belongs to, and what
+# it is. Sets REPLY_SLUG and REPLY_ROLE ("background" for start, "proxy", or the program a run
+# session started, e.g. "bash"); returns 1 if it belongs to none. The longest matching slug wins:
+# agent-bash-wheres-shadow is a bash session of 'wheres-shadow', not a 'bash-wheres' session of 'shadow'.
+_container_owner() {
+  local name="$1" slug rest best="" role=""
   [[ -f "$REGISTRY" ]] || return 1
-  while IFS='|' read -r slug abspath rest; do
+  while IFS='|' read -r slug rest; do
     [[ -z "$slug" || "$slug" == \#* ]] && continue
-    [[ "$name" == "agent-${slug}" || "$name" == agent-*-"${slug}" || "$name" == "shadow-proxy-${slug}" ]] && return 0
+    (( ${#slug} > ${#best} )) || continue
+    case "$name" in
+      "agent-${slug}")        best="$slug"; role="background" ;;
+      "shadow-proxy-${slug}") best="$slug"; role="proxy" ;;
+      agent-?*-"${slug}")     best="$slug"; role="${${name#agent-}%-${slug}}" ;;
+    esac
   done < "$REGISTRY"
-  return 1
+  [[ -n "$best" ]] || return 1
+  REPLY_SLUG="$best"; REPLY_ROLE="$role"
 }
 
 # Look up a registered workspace by exact slug.

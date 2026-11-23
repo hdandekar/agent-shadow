@@ -200,8 +200,28 @@ agent-shadow tools use -g node@24.11.1    # go back to an exact version
 agent-shadow tools uninstall python@3.12
 ```
 
-All projects share these toolchains, so `tools` refuses while any session runs (`agent-shadow stop --all` first).
-`mise install` inside a session says which `agent-shadow tools` command to run instead.
+**Where they live:** in `mise-store`, a volume that Apple `container` keeps on your Mac as a disk image (not a
+folder you can browse). Every session mounts it read-only at `/opt/mise`; only `agent-shadow tools` mounts it
+read-write, in a short-lived container of its own. `agent-shadow tools ls` shows what's in it,
+`container volume inspect mise-store` where the image is, and `agent-shadow uninstall --purge` removes it.
+
+**Why `tools` asks you to stop sessions:** each session is its own Linux VM, and a VM that has the disk image
+mounted keeps its own cached view of it. Writing to it from another VM while a session has it mounted would leave
+that session with a stale, possibly broken view. So when sessions run, `tools` lists them and asks first:
+
+```text
+  ⚠ 'tools' writes to the shared toolchains ('mise-store'). These sessions have it mounted and must stop first:
+    wheres-shadow          agent-shadow run bash
+    my-app                 background container (agent-shadow start): what runs in it stops too
+  Project files and each workspace's /root are kept; only the running programs end.
+Stop them and continue? [y/N]
+```
+
+Answer `y` to stop them and install, or `N` to change nothing. Without a terminal to ask in, it stops nothing
+unless you pass `--stop` (`agent-shadow tools --stop use -g jq@latest`). Start your sessions again afterwards;
+agent-shadow doesn't restart them. A container named `agent-…` that isn't from one of your projects also blocks
+`tools`, and agent-shadow leaves stopping it to you. `mise install` inside a session says which
+`agent-shadow tools` command to run instead.
 
 ### Customizing the image
 
@@ -252,7 +272,7 @@ at once.
 | `Base image 'agent-base:…' not found` | `agent-shadow init` (with `--distro` if you use another one) |
 | `claude: command not found` (or any tool) in a session | install it with `agent-shadow tools use -g …`; `tools install` alone doesn't activate it |
 | `'agy@latest' looks like a tool version` | `run` takes the program name: `agent-shadow run agy` |
-| `Running agent containers detected` from `tools` | `agent-shadow stop --all`, then run `tools` again |
+| `tools` asks to stop sessions | `y` stops them and installs; in scripts use `agent-shadow tools --stop …` (see [Toolchains](#toolchains)) |
 | `Image '…' was built from an older template` | it still works; `agent-shadow init --force` when convenient |
 | `cannot run ssh` on `git push` inside the session | push from the Mac: `agent-shadow git push` |
 | `… is already running, but on a different network` | `agent-shadow stop`, then run again |
@@ -271,8 +291,8 @@ at once.
 | `start [dir] [opts]` / `stop [dir] [--all]` | Start / stop the project's background container |
 | `connect [dir]` (alias `shell`) | Shell in the background container |
 | `wash [dir] [--force]` | Empty the project's `/root` |
-| `tools <mise args…>` | Run mise with write access to the toolchains |
-| `list` | Registered projects |
+| `tools [--stop] <mise args…>` | Run mise with write access to the toolchains (`--stop`: stop running sessions first) |
+| `list` | Registered projects and what's running in each (`background`, `proxy`, or the program a `run` started) |
 | `traffic [dir] [--all] [--follow] [--clear]` | Recorded DNS lookups and connections |
 | `egress [dir] list \| allow <host> \| revoke <host> \| watch` | Approvals for `--isolated` projects |
 | `git <args…>` | Host git with repository hooks and helpers pinned |

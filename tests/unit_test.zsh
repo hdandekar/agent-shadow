@@ -51,7 +51,7 @@ print -P "\n%B%F{blue}  agent-shadow host-only unit tests%f%b"
 section "Safety"
 assert_equal "tests use the inert container stub, not the real CLI" "${SAFE_BIN}/container" "$(command -v container)"
 
-# ---------------------------------------------------------------------------
+
 section "Version and installer"
 # ---------------------------------------------------------------------------
 # A release needs the code and the Homebrew formula to agree.
@@ -130,6 +130,15 @@ out="$(cd "${T}/z/My App!" && "$BIN" run agy@latest 2>&1)" && rc=0 || rc=$?
 assert_equal "run with a tool version (agy@latest) is refused" "1" "$rc"
 assert_contains "…and says to run the program by name" "Run it:     agent-shadow run agy" "$out"
 assert_contains "…and where versions are chosen" "agent-shadow tools use -g agy@latest" "$out"
+# Which workspace a running container belongs to (list's RUNNING column, stop --all, uninstall)
+mkdir -p "${T}/owners/agent-shadow"
+print -l 'shadow|/p/shadow|ubuntu24|' 'wheres-shadow|/p/wheres-shadow|ubuntu24|' > "${T}/owners/agent-shadow/workspaces"
+owner() { XDG_CONFIG_HOME="${T}/owners" zsh -c 'set -euo pipefail; source "$1/helpers.zsh"; _container_owner "$2" && print "$REPLY_SLUG $REPLY_ROLE" || print none' x "$LIB" "$1" 2>&1; }
+assert_equal "a run session belongs to the workspace with the longest matching name" "wheres-shadow bash" "$(owner agent-bash-wheres-shadow)"
+assert_equal "a background (start) container is recognised" "wheres-shadow background" "$(owner agent-wheres-shadow)"
+assert_equal "a program name with dashes stays whole" "shadow script-sh" "$(owner agent-script-sh-shadow)"
+assert_equal "an egress proxy is recognised" "shadow proxy" "$(owner shadow-proxy-shadow)"
+assert_equal "another tool's agent-* container belongs to no workspace" "none" "$(owner agent-other)"
 
 # ---------------------------------------------------------------------------
 section "rm guardrail (the image's /usr/local/bin/rm, run on the host)"

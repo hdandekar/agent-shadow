@@ -173,11 +173,17 @@ sec_tools() {
   CWD="$ROOT"; as tools ls
   expect_in "tools ls lists node" "node"
   CWD="$W1"; as run bash -c 'node --version'
-  expect_in "node from the toolchain volume runs in 'run'" "v22."
+  expect_in "node from the toolchain volume runs in 'run'" "v24."
   as start; need "start background container"
   CWD="$ROOT"; as tools ls
   expect_nonzero "tools refuses while an agent container runs (store would be written while mounted)"
-  expect_in "tools says why it refused" "Running agent containers detected"
+  expect_in "tools shows which workspace's session is running" "${S1}"
+  expect_in "tools says how to continue" "agent-shadow tools --stop ls"
+  check "a refused tools stopped nothing" 'running "agent-${S1}"'
+  as tools --stop ls
+  expect_rc "tools --stop stops the sessions and then runs mise" 0
+  expect_in "…mise ran (node listed)" "node"
+  check "…and the background container is gone" '! running "agent-${S1}"'
   stop_all_test
 }
 
@@ -187,6 +193,11 @@ sec_run() {
   CWD="$W1"
   as run bash -c 'node -e "console.log(6*7)"'
   expect_in "node executes code in the sandbox" "42"
+  check "the run container is gone once the program exits (not running)" '! running "agent-bash-${S1}"'
+  check "…and not left behind stopped either (removed)" '! exists_container "agent-bash-${S1}"'
+  LAST="print exit | agent-shadow run bash   (interactive shell, ends with exit)"
+  RC=0; OUT="$(print exit | (cd "$W1" && "$BIN" run bash 2>&1))" || RC=$?
+  check "an interactive run bash that exits leaves no container behind" '! exists_container "agent-bash-${S1}"'
   print HOSTDATA > "${W1}/host.txt"
   as run bash -c 'cat /workspace/host.txt; echo FROM-CONTAINER > /workspace/from-container.txt'
   expect_in "project folder is visible at /workspace" "HOSTDATA"
@@ -229,15 +240,17 @@ sec_lifecycle() {
   # binds loopback by Apple's own default, which would not test our rewrite.)
   as start -p "0.0.0.0:${port}:${port}"; need "start -p 0.0.0.0:${port}:${port}"
   check "background container is running" 'running "agent-${S1}"'
+  as list
+  check "list shows the background container as running for that workspace" '[[ "$(print -r -- "$OUT" | grep -E "^${S1} ")" == *" background "* ]]'
 
   LAST="print commands | agent-shadow connect"
   RC=0; OUT="$(print -l 'node --version' 'exit' | (cd "$W1" && "$BIN" connect 2>&1))" || RC=$?
-  expect_in "node is available in a connect shell" "v22."
+  expect_in "node is available in a connect shell" "v24."
 
   as run --env-file "${ROOT}/e2e.env" bash -c 'echo "F=$E2E_FILEVAR"; node --version'
   expect_in "run attaches to the running container" "attaching to agent-${S1}"
   expect_in "--env-file reaches a session that attaches to a running container" "F=fromfile"
-  expect_in "node is available when attaching" "v22."
+  expect_in "node is available when attaching" "v24."
 
   # Published port: one-connection HTTP server in the container, probed from the Mac
   cat > "${W1}/e2e-server.pl" <<'PERL'
@@ -421,6 +434,9 @@ sec_stopall() {
   CWD="$ROOT"; as stop --all
   check "stop --all stopped the workspace container" '! running "agent-${S1}"'
   check "stop --all left the unrelated agent-* container running" 'running "$foreign"'
+  CWD="$ROOT"; as tools --stop ls
+  expect_nonzero "tools --stop still refuses while an unrelated agent-* container runs (it may mount the store)"
+  check "tools --stop left the unrelated container running" 'running "$foreign"'
   command container stop "$foreign" >/dev/null 2>&1; command container rm -f "$foreign" >/dev/null 2>&1
 }
 

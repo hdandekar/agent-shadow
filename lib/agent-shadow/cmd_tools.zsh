@@ -19,22 +19,43 @@
 #   agent-shadow tools exec <tool@ver> -- <cmd...>   (= mise exec)
 
 # ---------------------------------------------------------------------------
-# _tools_check_running_agents <vol>
-# Aborts if any container whose name starts with 'agent-' is live.
+# _tools_check_running_agents <vol> <stop:0|1> <mise args as text, for the hint>
+# Sessions mount the store, so it must not be written while any runs. Shows what is running;
+# with --stop, or a "y" at the prompt, stops the registered workspaces' containers first.
+# Other agent-* containers are never stopped by agent-shadow, so they still block.
 # ---------------------------------------------------------------------------
 _tools_check_running_agents() {
-  local vol="$1"
-  _info "Checking for running agent containers…"
+  local vol="$1" stop="$2" args_text="$3" c
+  local -a mine=() others=()
+  for c in ${(f)"$(_container_names)"}; do
+    if _container_owner "$c"; then
+      case "$REPLY_ROLE" in
+        background) mine+=("$(printf '%-22s background container (agent-shadow start): what runs in it stops too' "$REPLY_SLUG")") ;;
+        proxy)      mine+=("$(printf '%-22s egress proxy (--isolated)' "$REPLY_SLUG")") ;;
+        *)          mine+=("$(printf '%-22s agent-shadow run %s' "$REPLY_SLUG" "$REPLY_ROLE")") ;;
+      esac
+    elif [[ "$c" == agent-* ]]; then
+      others+=("$c")
+    fi
+  done
 
-  local running_agents=""
-  running_agents="$(_container_names \
-    | grep '^agent-' || true)"
-
-  if [[ -n "$running_agents" ]]; then
-    _die "Running agent containers detected:\n${running_agents}\n\n  Stop all agent containers before running 'tools'.\n  ('tools' mounts '${vol}' read-write, which requires exclusive access.)"
+  if (( ${#others} )); then
+    _die "Containers named agent-* that aren't from a registered workspace are running:\n$(print -l -- "${others[@]/#/    }")\n  They may have '${vol}' mounted, so 'tools' won't write to it. agent-shadow doesn't stop\n  containers it can't tell are its own: stop them yourself (container stop <name>), then run 'tools' again."
   fi
+  (( ${#mine} )) || return 0
 
-  _ok "No running agent containers — safe to mount '${vol}' read-write."
+  _warn "'tools' writes to the shared toolchains ('${vol}'). These sessions have it mounted and must stop first:"
+  print -l -- "${mine[@]/#/    }" >&2
+  _info "Project files and each workspace's /root are kept; only the running programs end."
+  if (( ! stop )); then
+    if [[ -t 0 ]]; then
+      local answer=""
+      read -r "answer?Stop them and continue? [y/N] " || true
+      [[ "$answer" == [yY]* ]] && stop=1
+    fi
+    (( stop )) || _die "Nothing was stopped or installed.\n  Stop them and continue:  agent-shadow tools --stop ${args_text}\n  Or exit the sessions and run 'tools' again."
+  fi
+  cmd_stop --all
 }
 
 # ---------------------------------------------------------------------------
@@ -70,12 +91,13 @@ _tools_run_in_store() {
 # Main tools dispatcher — direct pass-through to mise
 # ---------------------------------------------------------------------------
 cmd_tools() {
-  local distro="$DEFAULT_DISTRO"
+  local distro="$DEFAULT_DISTRO" stop=0
   local -a mise_args=()
 
   while (( $# )); do
     case "$1" in
       --distro|-d) shift; distro="$1" ;;
+      --stop)      stop=1 ;;
       --)          shift; mise_args+=("$@"); break ;;
       # From the mise subcommand on, everything is mise's (incl. `--` and its own --dry-run)
       *)           mise_args+=("$@"); break ;;
@@ -84,7 +106,7 @@ cmd_tools() {
   done
 
   if (( ${#mise_args} == 0 )); then
-    _die "Usage: agent-shadow tools [--distro NAME] <mise-command> [args...]\n\n  Direct pass-through to mise inside the store container with write access.\n\n  Examples:\n    agent-shadow tools use -g node@24\n    agent-shadow tools install python@3.12\n    agent-shadow tools ls\n    agent-shadow tools upgrade node\n    agent-shadow tools uninstall python@3.12\n    agent-shadow tools exec node@24 -- node --version"
+    _die "Usage: agent-shadow tools [--distro NAME] [--stop] <mise-command> [args...]\n\n  Direct pass-through to mise inside the store container with write access.\n\n  Examples:\n    agent-shadow tools use -g node@24\n    agent-shadow tools install python@3.12\n    agent-shadow tools ls\n    agent-shadow tools upgrade node\n    agent-shadow tools uninstall python@3.12\n    agent-shadow tools exec node@24 -- node --version"
   fi
 
   # Normalize common alias 'update' -> mise's native 'upgrade'
@@ -97,7 +119,7 @@ cmd_tools() {
   local tag; tag="$(_base_tag "$distro")"
 
   _ensure_container_system
-  _tools_check_running_agents "$vol"
+  _tools_check_running_agents "$vol" "$stop" "${(j: :)${(q-)mise_args[@]}}"
   _heading "tools: mise ${mise_args[*]}"
 
   # Run mise with supplied arguments and reshim to ensure binary shims are up to date.

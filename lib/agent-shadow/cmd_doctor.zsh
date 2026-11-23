@@ -112,20 +112,28 @@ cmd_doctor() {
 }
 
 # ---------------------------------------------------------------------------
-# cmd_list — tabular list of registered workspaces
+# cmd_list — tabular list of registered workspaces and what is running in each
 # ---------------------------------------------------------------------------
 cmd_list() {
   _heading "Registered workspaces"
   _registry_init
 
+  # One `container ls` for all rows: running containers grouped by workspace
+  local -A running
+  local c
+  for c in ${(f)"$(_container_names)"}; do
+    _container_owner "$c" || continue
+    running[$REPLY_SLUG]+="${running[$REPLY_SLUG]:+, }${REPLY_ROLE}"
+  done
+
   local found=0 slug abspath reg_distro reg_net
-  printf "%-20s %-10s %-18s %s\n" "SLUG" "DISTRO" "NETWORK" "PATH" >&2
-  printf "%-20s %-10s %-18s %s\n" "────────────────────" "──────────" "──────────────────" "────" >&2
+  printf "%-20s %-10s %-18s %-24s %s\n" "SLUG" "DISTRO" "NETWORK" "RUNNING" "PATH" >&2
+  printf "%-20s %-10s %-18s %-24s %s\n" "────────────────────" "──────────" "──────────────────" "────────────────────────" "────" >&2
 
   while IFS='|' read -r slug abspath reg_distro reg_net; do
     [[ -z "$slug" || "$slug" == \#* ]] && continue
     found=1
-    printf "%-20s %-10s %-18s %s\n" "$slug" "$reg_distro" "${reg_net:-shadow-net}" "$abspath" >&2
+    printf "%-20s %-10s %-18s %-24s %s\n" "$slug" "$reg_distro" "${reg_net:-shadow-net}" "${running[$slug]:--}" "$abspath" >&2
   done < "$REGISTRY"
 
   (( found )) || _warn "No workspaces registered. Run: agent-shadow register <dir>"

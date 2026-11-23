@@ -95,7 +95,11 @@ m tools-forces-tty mac:tools lib/agent-shadow/cmd_tools.zsh \
   '  [[ -t 0 ]] && tty_arg=(--tty)' '  tty_arg=(--tty)' \
   "tools can't run without a terminal (scripts, CI)"
 m tools-gate-off mac:tools lib/agent-shadow/cmd_tools.zsh \
-  '  _tools_check_running_agents "$vol"' '  true' "tools writes the store while sessions mount it"
+  '  _tools_check_running_agents "$vol" "$stop" "${(j: :)${(q-)mise_args[@]}}"' '  true' "tools writes the store while sessions mount it"
+m tools-stop-ignored mac:tools lib/agent-shadow/cmd_tools.zsh \
+  '      --stop)      stop=1 ;;' '      --stop)      ;;' "tools --stop still refuses instead of stopping the sessions"
+m tools-stops-foreign mac:stopall lib/agent-shadow/cmd_tools.zsh \
+  '  if (( ${#others} )); then' '  if false; then' "tools writes the store while another agent-* container (maybe with it mounted) runs"
 m wash-noop mac:wash lib/agent-shadow/cmd_wash.zsh \
   '  command container volume rm "$vol_home" >/dev/null 2>&1 || true' '  true' "wash leaves the old /root in place"
 m slug-collision-mac mac:registry lib/agent-shadow/helpers.zsh \
@@ -141,6 +145,15 @@ m run-unsafe-container-name mac:run lib/agent-shadow/cmd_run.zsh \
 m prompt-no-workspace mac:run lib/agent-shadow/session.zsh \
   '  a+=(--env "AGENT_SHADOW_WORKSPACE=${slug}")' '  true' \
   "run and start no longer pass the workspace name the prompt shows"
+m run-keeps-container mac:run lib/agent-shadow/cmd_run.zsh \
+  '  local -a run_args=(--rm --interactive' '  local -a run_args=(--interactive' \
+  "run leaves its container behind after the program exits"
+m owner-first-match unit lib/agent-shadow/helpers.zsh \
+  '    (( ${#slug} > ${#best} )) || continue' '    [[ -z "$best" ]] || continue' \
+  "a session of 'wheres-shadow' is counted as one of 'shadow' (first matching name wins)"
+m list-no-running mac:lifecycle lib/agent-shadow/cmd_doctor.zsh \
+  '    running[$REPLY_SLUG]+="${running[$REPLY_SLUG]:+, }${REPLY_ROLE}"' '    true' \
+  "list shows every workspace as not running"
 # Last on purpose: these change an image file, so the test image is rebuilt for each (and once more
 # by the next normal run). Only the image's awk (mawk) buffers pipes; macOS's awk can't show it.
 m traffic-awk-buffered mac:traffic lib/agent-shadow/image/traffic-monitor.sh \
