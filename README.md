@@ -24,7 +24,7 @@ A `zsh` command-line tool for running AI coding agents (`claude`, `codex`, `agy`
 brew tap hdandekar/agent-shadow https://github.com/hdandekar/agent-shadow
 brew install agent-shadow          # upgrade later with: brew upgrade agent-shadow
 ```
-Available from the first tagged release (`v0.1.0`). agent-shadow is not in homebrew-core: the tap is this
+agent-shadow is not in homebrew-core: the tap is this
 repository. Because it is named `agent-shadow` rather than `homebrew-agent-shadow`, `brew tap` needs the URL;
 the tap is still called `hdandekar/agent-shadow`. Homebrew downloads the tagged source archive and checks it
 against the SHA-256 in `Formula/agent-shadow.rb`. It also installs Apple's `container` if you don't have it.

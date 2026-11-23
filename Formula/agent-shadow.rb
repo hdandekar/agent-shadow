@@ -1,9 +1,8 @@
 class AgentShadow < Formula
-  # The sha256 is filled in once the v0.1.0 tag is pushed (GitHub builds the archive).
   desc "Run coding agents in per-project Apple Container workspaces"
   homepage "https://github.com/hdandekar/agent-shadow"
   url "https://github.com/hdandekar/agent-shadow/archive/refs/tags/v0.1.0.tar.gz"
-  sha256 "<sha256-of-release-tarball>"
+  sha256 "178f5ea57c1f194daf90c0934cac8c7db65257e1fe68d47a13fa1a577e8cf081"
   license "MIT"
 
   # Apple Container requires macOS 26 (Tahoe) or later for user-defined networks.
