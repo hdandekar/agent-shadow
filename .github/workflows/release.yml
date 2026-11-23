@@ -1,0 +1,90 @@
+name: Release
+
+# Actions → Release → Run workflow. Bumps the version (helpers.zsh, Formula url and test),
+# commits and tags it, pushes, then sets the Formula sha256 to GitHub's archive of that tag
+# in a second commit. The checksum can't be in the tagged commit itself: the archive contains
+# the Formula, so its hash depends on the file that would hold it.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release, e.g. 0.2.0 (empty: next patch version)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: macos-latest
+    # The token only authorizes the push; a commit still needs an author, and a fresh runner has none.
+    env:
+      GIT_AUTHOR_NAME: github-actions[bot]
+      GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+      GIT_COMMITTER_NAME: github-actions[bot]
+      GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Pick the version
+        id: v
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          current="$(sed -n 's/^readonly AGENT_SHADOW_VERSION="\(.*\)"$/\1/p' lib/agent-shadow/helpers.zsh)"
+          version="${INPUT_VERSION#v}"
+          if [ -z "$version" ]; then
+            version="$(echo "$current" | awk -F. '{ printf "%d.%d.%d", $1, $2, $3 + 1 }')"
+          fi
+          echo "$version" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' >/dev/null || { echo "::error::'$version' is not X.Y.Z"; exit 1; }
+          if git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then echo "::error::tag v$version already exists"; exit 1; fi
+          echo "Releasing $version (current: $current)"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Lint and host-only tests (before the bump)
+        run: make lint test
+
+      - name: Bump the version
+        env:
+          VERSION: ${{ steps.v.outputs.version }}
+        run: |
+          perl -pi -e 's/^readonly AGENT_SHADOW_VERSION=".*"$/readonly AGENT_SHADOW_VERSION="$ENV{VERSION}"/' lib/agent-shadow/helpers.zsh
+          perl -pi -e 's|archive/refs/tags/v[0-9.]+\.tar\.gz|archive/refs/tags/v$ENV{VERSION}.tar.gz|; s/"agent-shadow [0-9.]+"/"agent-shadow $ENV{VERSION}"/' Formula/agent-shadow.rb
+          git diff --stat
+          # the unit suite checks helpers.zsh, the Formula url and the Formula test agree
+          make test
+
+      - name: Commit, tag and push
+        env:
+          VERSION: ${{ steps.v.outputs.version }}
+        run: |
+          git commit -am "release: agent-shadow ${VERSION}"
+          git tag "v${VERSION}"
+          git push --atomic origin HEAD:main "v${VERSION}"
+
+      - name: Set the Formula checksum to the tag archive
+        env:
+          VERSION: ${{ steps.v.outputs.version }}
+        run: |
+          url="https://github.com/${GITHUB_REPOSITORY}/archive/refs/tags/v${VERSION}.tar.gz"
+          curl -fsSL --retry 5 --retry-delay 3 "$url" -o release.tar.gz
+          sha="$(shasum -a 256 release.tar.gz | cut -d' ' -f1)"
+          # the archive must be the tagged commit's (its Formula names this version)
+          tar -xzOf release.tar.gz "agent-shadow-${VERSION}/Formula/agent-shadow.rb" | grep "tags/v${VERSION}.tar.gz" >/dev/null
+          rm release.tar.gz
+          perl -pi -e "s/^  sha256 \"[0-9a-f]{64}\"\$/  sha256 \"${sha}\"/" Formula/agent-shadow.rb
+          grep "sha256 \"${sha}\"" Formula/agent-shadow.rb >/dev/null
+          git commit -am "chore(formula): set the v${VERSION} archive checksum"
+          git push origin HEAD:main
+          echo "### Released v${VERSION}" >> "$GITHUB_STEP_SUMMARY"
+          echo "sha256 \`${sha}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "Users: \`brew update && brew upgrade agent-shadow\`" >> "$GITHUB_STEP_SUMMARY"
