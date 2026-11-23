@@ -5,12 +5,11 @@ class AgentShadow < Formula
   sha256 "178f5ea57c1f194daf90c0934cac8c7db65257e1fe68d47a13fa1a577e8cf081"
   license "MIT"
 
-  # Apple Container requires macOS 26 (Tahoe) or later for user-defined networks.
-  depends_on macos: :tahoe
-
   # Apple's container CLI is in homebrew-core (Formula/c/container.rb).
   # Declaring it here means `brew install agent-shadow` pulls it in automatically.
   depends_on "container"
+  # Apple Container requires macOS 26 (Tahoe) or later for user-defined networks.
+  depends_on macos: :tahoe
 
   def install
     bin.install "bin/agent-shadow"

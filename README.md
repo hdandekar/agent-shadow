@@ -22,6 +22,7 @@ A `zsh` command-line tool for running AI coding agents (`claude`, `codex`, `agy`
 
 ```bash
 brew tap hdandekar/agent-shadow https://github.com/hdandekar/agent-shadow
+brew trust --formula hdandekar/agent-shadow/agent-shadow   # Homebrew 6+ loads third-party formulae only once trusted
 brew install agent-shadow          # upgrade later with: brew upgrade agent-shadow
 ```
 agent-shadow is not in homebrew-core: the tap is this
